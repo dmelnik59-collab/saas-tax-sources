@@ -573,20 +573,6 @@ document.getElementById('expandAll').addEventListener('click', () => {
 });
 
 render();
-  });
-});
-
-// Search
-document.getElementById('searchBox').addEventListener('input', render);
-
-// Expand all
-document.getElementById('expandAll').addEventListener('click', () => {
-  const cards = document.querySelectorAll('.source-card');
-  const anyOpen = [...cards].some(c => c.classList.contains('open'));
-  cards.forEach(c => anyOpen ? c.classList.remove('open') : c.classList.add('open'));
-});
-
-render();
 </script>
 </body>
 </html>
