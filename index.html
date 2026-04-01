@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דשבורד מקורות — עבודת SaaS</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+<style>
+:root {
+  --primary: #1a365d;
+  --primary-light: #2c5282;
+  --accent: #3182ce;
+  --success: #38a169;
+  --warning: #d69e2e;
+  --danger: #e53e3e;
+  --gray-50: #f7fafc;
+  --gray-100: #edf2f7;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e0;
+  --gray-500: #718096;
+  --gray-700: #4a5568;
+  --gray-800: #2d3748;
+  --radius: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', -apple-system, Arial, sans-serif; background: var(--gray-50); color: var(--gray-800); line-height: 1.6; }
+
+/* Header */
+.header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; padding: 30px 40px; }
+.header h1 { font-size: 26px; margin-bottom: 5px; }
+.header .subtitle { opacity: 0.85; font-size: 14px; }
+
+/* Stats bar */
+.stats-bar { display: flex; gap: 20px; padding: 20px 40px; background: white; border-bottom: 1px solid var(--gray-200); flex-wrap: wrap; }
+.stat-card { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 8px; background: var(--gray-50); border: 1px solid var(--gray-200); }
+.stat-card .num { font-size: 24px; font-weight: 700; }
+.stat-card .label { font-size: 13px; color: var(--gray-500); }
+.stat-card.total .num { color: var(--primary); }
+.stat-card.done .num { color: var(--success); }
+.stat-card.pending .num { color: var(--danger); }
+
+/* Controls */
+.controls { display: flex; gap: 12px; padding: 20px 40px; flex-wrap: wrap; align-items: center; }
+.search-box { flex: 1; min-width: 200px; padding: 10px 16px; border: 1px solid var(--gray-300); border-radius: 8px; font-size: 14px; direction: rtl; }
+.search-box:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
+.filter-btn { padding: 8px 16px; border: 1px solid var(--gray-300); border-radius: 8px; background: white; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.filter-btn:hover { background: var(--gray-100); }
+.filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* Main content */
+.main { padding: 20px 40px; }
+
+/* Section headers */
+.section-header { display: flex; align-items: center; gap: 10px; margin: 30px 0 15px; padding: 10px 0; border-bottom: 2px solid var(--primary); }
+.section-header h2 { font-size: 18px; color: var(--primary); }
+.section-header .badge { background: var(--primary); color: white; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
+
+/* Source cards */
+.source-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); margin: 10px 0; transition: all 0.2s; overflow: hidden; }
+.source-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.source-card.downloaded { border-right: 4px solid var(--success); }
+.source-card.missing { border-right: 4px solid var(--danger); }
+
+.card-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; cursor: pointer; user-select: none; }
+.card-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; flex-shrink: 0; }
+.downloaded .card-num { background: var(--success); }
+.missing .card-num { background: var(--danger); }
+.card-title { flex: 1; font-weight: 600; font-size: 14px; }
+.card-status { font-size: 12px; padding: 3px 12px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+.downloaded .card-status { background: #c6f6d5; color: #276749; }
+.missing .card-status { background: #fed7d7; color: #9b2c2c; }
+.importance-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+.importance-high { background: #fef3c7; color: #92400e; }
+.importance-medium { background: #dbeafe; color: #1e40af; }
+.importance-low { background: var(--gray-100); color: var(--gray-500); }
+.expand-icon { color: var(--gray-500); transition: transform 0.2s; font-size: 14px; }
+.source-card.open .expand-icon { transform: rotate(180deg); }
+
+.card-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--gray-100); }
+.source-card.open .card-body { display: block; padding-top: 16px; }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+
+.detail-box { background: var(--gray-50); border-radius: 8px; padding: 12px 16px; }
+.detail-box h4 { font-size: 11px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.detail-box p { font-size: 13px; line-height: 1.5; }
+
+.file-info { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 16px; background: #ebf8ff; border-radius: 8px; font-size: 13px; }
+.file-info i { color: var(--accent); }
+.file-info .filename { font-family: monospace; direction: ltr; text-align: left; font-size: 12px; color: var(--gray-700); }
+
+.drive-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 8px 16px; background: var(--accent); color: white; border-radius: 8px; text-decoration: none; font-size: 13px; transition: background 0.2s; }
+.drive-link:hover { background: var(--primary-light); }
+.drive-link.disabled { background: var(--gray-300); cursor: not-allowed; }
+
+/* Chapter mapping */
+.chapter-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; margin: 2px; background: #e9d5ff; color: #6b21a8; }
+
+/* Footer */
+.footer { text-align: center; padding: 30px; color: var(--gray-500); font-size: 12px; }
+
+/* Team bar */
+.team-bar { display: flex; gap: 20px; padding: 15px 40px; background: rgba(255,255,255,0.1); flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.team-members { display: flex; gap: 20px; flex-wrap: wrap; }
+.team-member { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.team-member .name { font-weight: 600; }
+.team-member a { color: rgba(255,255,255,0.9); text-decoration: none; font-size: 12px; }
+.team-member a:hover { color: white; text-decoration: underline; }
+.header-links { display: flex; gap: 12px; flex-wrap: wrap; }
+.header-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(255,255,255,0.15); color: white; border-radius: 6px; text-decoration: none; font-size: 12px; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.2); }
+.header-link:hover { background: rgba(255,255,255,0.25); }
+
+/* Print styles */
+@media print { .controls, .expand-icon { display: none; } .card-body { display: block !important; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><i class="fas fa-book-open"></i> לאקונה בסיווג עסקאות SaaS לצורכי ניכוי מס במקור</h1>
+  <div class="subtitle">סמינריון היבטים כלכליים של חוקי מס | פרופ' גילבאי | המכללה האקדמית לניהול</div>
+  <div class="team-bar">
+    <div class="team-members">
+      <div class="team-member"><i class="fas fa-user"></i> <span class="name">דוד מלניק</span> <a href="mailto:david@melnik.org.il" title="שלח מייל"><i class="fas fa-envelope"></i></a></div>
+      <div class="team-member"><i class="fas fa-user"></i> <span class="name">רן סוקולובסקי</span> <a href="mailto:sokolovski2112@gmail.com" title="שלח מייל"><i class="fas fa-envelope"></i></a></div>
+      <div class="team-member"><i class="fas fa-user"></i> <span class="name">מאור אשר</span> <a href="mailto:maorasher3822@gmail.com" title="שלח מייל"><i class="fas fa-envelope"></i></a></div>
+    </div>
+    <div class="header-links">
+      <a class="header-link" href="https://drive.google.com/drive/folders/11KVP77wjfllfCY-zkBlgfn1U4S6bGPND" target="_blank"><i class="fab fa-google-drive"></i> Google Drive</a>
+      <a class="header-link" href="mailto:david@melnik.org.il,sokolovski2112@gmail.com,maorasher3822@gmail.com?subject=סמינריון SaaS — " target="_blank"><i class="fas fa-paper-plane"></i> מייל לכולם</a>
+    </div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-card total"><div><div class="num" id="totalCount">31</div><div class="label">סה"כ מקורות</div></div></div>
+  <div class="stat-card done"><div><div class="num" id="doneCount">0</div><div class="label">הורדו</div></div></div>
+  <div class="stat-card pending"><div><div class="num" id="pendingCount">0</div><div class="label">חסרים</div></div></div>
+  <div class="stat-card" style="margin-right:auto;"><div><div class="num" style="color:var(--accent); font-size:16px;" id="progressBar">0%</div><div class="label">התקדמות</div></div></div>
+</div>
+
+<div class="controls">
+  <input type="text" class="search-box" id="searchBox" placeholder="🔍 חיפוש מקור, מחבר, נושא...">
+  <button class="filter-btn active" data-filter="all">הכל</button>
+  <button class="filter-btn" data-filter="downloaded">✅ הורד</button>
+  <button class="filter-btn" data-filter="missing">❌ חסר</button>
+  <button class="filter-btn" data-filter="high">⭐ חשיבות גבוהה</button>
+  <button class="filter-btn" id="expandAll" title="פתח/סגור הכל"><i class="fas fa-expand-alt"></i></button>
+</div>
+
+<div class="main" id="mainContent"></div>
+
+<div class="footer">לאקונה בסיווג עסקאות SaaS לצורכי ניכוי מס במקור — סמינריון פרופ' גילבאי | דוד, רן, מאור | עודכן: 1.4.2026</div>
+
+<script>
+const SOURCES = [
+  {
+    section: "א. דין ישראלי — חוזרים והחלטות",
+    sectionIcon: "🇮🇱",
+    items: [
+      { num: 1, title: "חוזר 13/2001 — CapiTax (PDF)", downloaded: true,
+        file: "חוזר 13-2001.pdf",
+        importance: "high",
+        summary: "הנוסח המלא של חוזר מס הכנסה 13/2001 — סיווג הכנסה מעסקאות בינלאומיות המשלבות תוכנה. מגדיר 4 קטגוריות: מכירת זכות יוצרים, מכירת עותק, תמלוגים, ומתן שירות.",
+        relevance: "המסמך המרכזי של הלאקונה. זהו הבסיס הנורמטיבי היחיד שרשות המסים פרסמה לסיווג תוכנה, וה-SaaS לא קיים בו כלל. כל הטענה של העבודה נבנית על החסר הזה.",
+        chapters: ["פרק 2 — הדין הקיים", "פרק 3 — הלאקונה"],
+        driveLink: "" },
+      { num: 2, title: "חוזר 13/2001 — PwC (PDF)", downloaded: false,
+        file: "",
+        importance: "medium",
+        summary: "ניתוח של PwC Israel לחוזר 13/2001 — גרסה נוחה יותר לקריאה עם הערות מקצועיות.",
+        relevance: "תומך בפרק הדין הקיים. נוח לקריאה ולציטוט כמקור משני.",
+        chapters: ["פרק 2"],
+        driveLink: "" },
+      { num: 3, title: "חוזר 13/2001 — באנגלית (HG.org)", downloaded: false,
+        file: "",
+        importance: "low",
+        summary: "סיכום באנגלית של עמדת רשות המסים הישראלית בנוגע לסיווג עסקאות תוכנה בינלאומיות.. סוכם במסמך סיכומי_מקורות_אינטרנט.docx",
+        relevance: "שימושי רק אם צריך להפנות לסיכום באנגלית. לא הכרחי לעבודה עצמה.",
+        chapters: ["ביבליוגרפיה"],
+        driveLink: "", summarized: true },
+      { num: 4, title: "החלטות מיסוי מקצועיות (CapiTax)", downloaded: true,
+        file: "החלטת מיסוי 4668-20 מפעל טכנולוגי מועדף העוסק בענן.docx",
+        importance: "high",
+        summary: "החלטות מיסוי 4668/20 (PaaS — מרכזית!), 0304/20, 2253/18, 2167/18. כולן בנושא חוק עידוד, לא ניכוי מס במקור.",
+        relevance: "מחזק את הטענה: רשות המסים מכירה ב-SaaS לצורך חוק עידוד אך לא מסדירה את סיווגו לצורך ניכוי מס — הסתירה הפנימית.",
+        chapters: ["פרק 3 — הלאקונה", "פרק 4 — הסתירה"],
+        driveLink: "" },
+      { num: 5, title: "מבזק ארצי חיבה כהן 822", downloaded: true,
+        file: "יסוי בינלאומי - ארהב, סיווג עסקה המבוססת על שירותי.pdf",
+        importance: "high",
+        summary: "מבזק מס מספר 822 — סיווג עסקה מבוססת שירותי ענן: האם תמלוגים או שירותים? המקור הישראלי הכי ישיר לסוגיית ה-SaaS.",
+        relevance: "הכי קרוב למה שהעבודה בודקת מהצד הישראלי. מראה שהפרקטיקה המקצועית מזהה את הלאקונה.",
+        chapters: ["פרק 2", "פרק 3"],
+        driveLink: "" },
+      { num: 6, title: "חוזר 09/2017 — חוק עידוד", downloaded: true,
+        file: "Policy_IncomeTaxProfessionalInst_hoz_09_2017_acc.pdf",
+        importance: "high",
+        summary: "חוזר מס הכנסה 09/2017 — תיקון 73 לחוק עידוד השקעות הון. מגדיר SaaS כ'הכנסה טכנולוגית' לצורכי הטבות מס.",
+        relevance: "הבסיס לטענת הסתירה הפנימית: רשות המסים מסווגת SaaS כ'זכות שימוש בתוכנה' לצורך חוק עידוד (= הטבה) אך אם אותו סיווג מוחל לניכוי מס = חבות.",
+        chapters: ["פרק 3", "פרק 4"],
+        driveLink: "" }
+    ]
+  },
+
+  {
+    section: "ב. ארה\"ב — תקנות §1.861-18/19 (ינואר 2025)",
+    sectionIcon: "🇺🇸",
+    items: [
+      { num: 7, title: "תקנות סופיות (Federal Register)", downloaded: true,
+        file: "2024-31372.pdf + irb25-08.pdf",
+        importance: "high",
+        summary: "Federal Register 2024-31372 (T.D. 10022): תקנות סופיות לסיווג עסקאות דיגיטליות וענן. §1.861-19 מסווגת כל עסקת ענן כשירות. כלל predominant character. הורד בשני פורמטים: (1) 2024-31372.pdf — הנוסח הרשמי מה-Federal Register; (2) irb25-08.pdf — Internal Revenue Bulletin 2025-8 שמכיל גם Notice 2025-6 (עמ' 799) ו-REG-107420-24 (עמ' 854).",
+        relevance: "המהפכה האמריקאית: ארה\"ב קבעה חד-משמעית שכל ענן = שירות. הבסיס ל'מה שישראל לא עשתה'.",
+        chapters: ["פרק 4 — משפט משווה"],
+        driveLink: "" },
+      { num: 8, title: "ניתוח BDO", downloaded: false,
+        file: "",
+        importance: "medium",
+        summary: "ניתוח BDO של התקנות כולל Example 10 — SaaS דרך מפיץ ישראלי שמשלם לספק זר.. סוכם במסמך סיכומי_מקורות_אינטרנט.docx",
+        relevance: "Example 10 ממחיש בדיוק את הדוגמה של Tech-Israel ו-Cloud-Ireland.",
+        chapters: ["פרק 4"],
+        driveLink: "", summarized: true },
+      { num: 9, title: "ניתוח Grant Thornton", downloaded: false,
+        file: "",
+        importance: "medium",
+        summary: "ניתוח Grant Thornton: sourcing רק הוצע ולא סופי. שינוי ממשל עלול להשפיע.. סוכם במסמך סיכומי_מקורות_אינטרנט.docx",
+        relevance: "מוסיף ממד של אי-ודאות פוליטית — רלוונטי לפרק הממשקים.",
+        chapters: ["פרק 4", "פרק 5"],
+        driveLink: "", summarized: true },
+      { num: 10, title: "ניתוח KPMG (PDF)", downloaded: true,
+        file: "tnf-kpmg-report-cloud-regulations-january-2025.pdf",
+        importance: "medium",
+        summary: "דוח KPMG מינואר 2025 על התקנות, כולל Notice 2025-6 — הרחבת הכללים לכל ה-IRC.",
+        relevance: "מוסיף שכבה של Notice 2025-6 שמרחיב את ההשלכות.",
+        chapters: ["פרק 4"],
+        driveLink: "" },
+      { num: 11, title: "ניתוח PwC US", downloaded: true,
+        file: "pwc-key-highlights-of-final-and-proposed-cloud-transactions-regs.pdf",
+        importance: "medium",
+        summary: "PwC US — נקודות מרכזיות: predominant character rule, billing address כ-source, ענן כשירות בלבד.",
+        relevance: "סיכום ממוקד ונוח לציטוט בפרק המשפט המשווה.",
+        chapters: ["פרק 4"],
+        driveLink: "" }
+    ]
+  },
+  {
+    section: "ג. הודו — פס\"ד Engineering Analysis Centre (עליון, 2021)",
+    sectionIcon: "🇮🇳",
+    items: [
+      { num: 12, title: "פסק דין מלא (Indian Kanoon)", downloaded: true,
+        file: "Engineering_Analysis_Centre_Of_vs_The_Commissioner_Of_Income_Tax_on_2_March_2021 (1).pdf",
+        importance: "high",
+        summary: "פסק דין עליון הודי מ-2.3.2021: 103 ערעורים. תשלום עבור תוכנה אינו תמלוגים אלא רכישת זכות שימוש ב'יצירה מוגנת'. אין העברת זכויות יוצרים.",
+        relevance: "פסק הדין המשפיע ביותר בעולם בנושא. הראשון שקבע ברמת עליון שתוכנה off-the-shelf ≠ תמלוגים. בסיס ל'עמדת הנישום'.",
+        chapters: ["פרק 3 — עמדת הנישום", "פרק 4 — הודו"],
+        driveLink: "" },
+      { num: 13, title: "סיכום Khaitan & Co (PDF, 4 עמ')", downloaded: true,
+        file: "Engineering Analysis Centre of Excellence v. CIT_Ergo_22032021_0.pdf",
+        importance: "high",
+        summary: "סיכום מקצועי של Khaitan & Co (Ergo). 5 קביעות מרכזיות של ביהמ\"ש העליון.",
+        relevance: "הסיכום הכי תמציתי ונוח לציטוט. מושלם להערות שוליים.",
+        chapters: ["פרק 3", "פרק 4"],
+        driveLink: "" },
+      { num: 14, title: "סיכום TPguidelines", downloaded: false,
+        file: "",
+        importance: "low",
+        summary: "סיכום + ציטוטים מרכזיים מפסק הדין ההודי, עם הפניות למודלים בינלאומיים.",
+        relevance: "חלופה ל-13. שימושי רק אם צריך ציטוט נוסף.",
+        chapters: ["ביבליוגרפיה"],
+        driveLink: "", removed: true },
+      { num: 15, title: "ITAT Online — טקסט + הערות עורך", downloaded: false,
+        file: "",
+        importance: "low",
+        summary: "פסק הדין המלא עם הערת עורך מקצועית של ITAT Online.",
+        relevance: "כפילות עם מקור 12. שימושי כגיבוי.",
+        chapters: ["ביבליוגרפיה"],
+        driveLink: "", removed: true },
+      { num: 16, title: "מצגת Chamber of Tax (PDF)", downloaded: false,
+        file: "",
+        importance: "medium",
+        summary: "מצגת של CA Saurav Bhattacharya מ-7.9.2021 על השלכות פסק הדין.",
+        relevance: "מסודר בפורמט מצגת — נוח להבנת ההשלכות המעשיות.",
+        chapters: ["פרק 4"],
+        driveLink: "" },
+      { num: 17, title: "PwC India 2024 — השלכות", downloaded: true,
+        file: "pwc_india_tax_insights_9_september_2024_income_from_sale_of_software_products_and_from_rendering_ancillary_services_thereon.pdf",
+        importance: "medium",
+        summary: "PwC India Tax Insights ספטמבר 2024: גם תוכנה מותאמת (customized) אינה תמלוגים לפי EAC.",
+        relevance: "מרחיב את EAC גם ל-customized SaaS — רלוונטי להבחנה של ג'ימיני בין SaaS מדף לSaaS מותאם.",
+        chapters: ["פרק 3", "פרק 4"],
+        driveLink: "" },
+      { num: 18, title: "International Tax Review — ניתוח", downloaded: false,
+        file: "",
+        importance: "medium",
+        summary: "ניתוח מעמיק של ITR על פסק הדין: Deep Dive: Indian Supreme Court's Ruling on Software Licensing Fees.. סוכם במסמך סיכומי_מקורות_אינטרנט.docx",
+        relevance: "ניתוח איכותי מכתב עת מוביל. תומך בציטוט אקדמי.",
+        chapters: ["פרק 4"],
+        driveLink: "", summarized: true }
+    ]
+  },
+  {
+    section: "ד. OECD — פרשנות סעיף 12 + BEPS",
+    sectionIcon: "🌐",
+    items: [
+      { num: 19, title: "אמנת המודל המלאה (OECD 2017)", downloaded: true,
+        file: "g2g972ee-en.pdf",
+        importance: "high",
+        summary: "OECD Model Tax Convention 2017 Full Version. פסקאות 14-17.2 לסעיף 12 — ההבחנה בין copyright ל-copyrighted article.",
+        relevance: "התשתית הבינלאומית לכל הדיון. ההבחנה copyright vs copyrighted article היא ליבת הסוגיה.",
+        chapters: ["פרק 2", "פרק 3", "פרק 4"],
+        driveLink: "" },
+      { num: 20, title: "ניתוח CIAT — תמלוגים מול שירותים", downloaded: false,
+        file: "",
+        importance: "medium",
+        summary: "השוואה מקיפה בין OECD לאו"ם בסיווג תשלומים — royalties vs services. כולל Article 12A (UN). סוכם במסמך סיכומי_מקורות_אינטרנט.docx",
+        relevance: "נותן את הפרספקטיבה הבינלאומית — למה OECD ואו\"ם חולקים.",
+        chapters: ["פרק 4"],
+        driveLink: "", summarized: true },
+      { num: 21, title: "BEPS Action 1 — Digital Economy (2015)", downloaded: true,
+        file: "9789264241046-en.pdf",
+        importance: "medium",
+        summary: "OECD BEPS Action 1 Final Report 2015 — אתגרי מיסוי הכלכלה הדיגיטלית. 290 עמ'. ring-fencing לא אפשרי.",
+        relevance: "הרקע ההיסטורי — למה נוצר Pillar One/Two. בסיס לפרק הממשקים.",
+        chapters: ["פרק 5 — ממשקים"],
+        driveLink: "" },
+      { num: 22, title: "MLI — אמנה רב-צדדית (OECD)", downloaded: true,
+        file: "multilateral-convention-to-implement-tax-treaty-related-measures-to-prevent-beps.pdf",
+        importance: "medium",
+        summary: "Multilateral Convention to Implement Tax Treaty Related Measures to Prevent BEPS. מבחן PPT (Article 7).",
+        relevance: "מבחן ה-PPT רלוונטי למבנים עם חברות במדינות דלות מס. שיקול ב'ממשקים'.",
+        chapters: ["פרק 5"],
+        driveLink: "" }
+    ]
+  },
+  {
+    section: "ה. או\"ם — סעיפים 12, 12A, 12B",
+    sectionIcon: "🇺🇳",
+    items: [
+      { num: 23, title: "מסמך תמלוגים/תוכנה (CRP8)", downloaded: true,
+        file: "12STM_CRP8_Royalties.pdf",
+        importance: "medium",
+        summary: "UN Committee of Experts CRP.8 (2016) — מסמך עבודה על תמלוגים ותוכנה. דן בהגדרת royalties לפי Model.",
+        relevance: "מראה את הדיון ברמה הבינלאומית על הכנסת תוכנה להגדרת תמלוגים.",
+        chapters: ["פרק 4"],
+        driveLink: "" },
+      { num: 24, title: "אמנת המודל 2021 (UN)", downloaded: true,
+        file: "UN Model_2021.pdf",
+        importance: "high",
+        summary: "UN Model Double Taxation Convention 2021. כולל Article 12B — שירותים דיגיטליים אוטומטיים. מס מקור על SaaS.",
+        relevance: "Article 12B הוא 'הפתרון' של האו\"ם — מס מקור על automated digital services. רלוונטי לפתרון המוצע.",
+        chapters: ["פרק 4", "פרק 6 — פתרון"],
+        driveLink: "" }
+    ]
+  },
+  {
+    section: "ו. אוסטרליה — TR 2024/D1",
+    sectionIcon: "🇦🇺",
+    items: [
+      { num: 25, title: "תגובת ITI (PDF)", downloaded: true,
+        file: "2024.03.01ITIcommentonATOdrafttaxationruling(TR2024D1).pdf",
+        importance: "medium",
+        summary: "Information Technology Industry Council — תגובה לטיוטת רולינג TR 2024/D1 של ה-ATO. ביקורת חריפה: חורג מ-OECD, מתעלם מ-EAC.",
+        relevance: "אוסטרליה = הקצה השני: מסווגת SaaS כתמלוגים. מראה את הספקטרום הבינלאומי.",
+        chapters: ["פרק 4 — אוסטרליה"],
+        driveLink: "" }
+    ]
+  },
+  {
+    section: "ז. מאמרים אקדמיים",
+    sectionIcon: "📚",
+    items: [
+      { num: 26, title: "הרפז — Yale 2021", downloaded: true,
+        file: "02_Assaf_Harpaz_Taxation_of_the_Digital_Economy_.pdf",
+        importance: "high",
+        summary: "Assaf Harpaz, 'Taxation of the Digital Economy: Adapting a Twentieth-Century Tax System to a Twenty-First-Century Economy', 46 Yale J. Int'l L. 57 (2021). nexus rule חדש.",
+        relevance: "מאמר מוביל על מיסוי הכלכלה הדיגיטלית. תומך בטענה שהמערכת הקיימת מיושנת.",
+        chapters: ["פרק 1 — מבוא", "פרק 5"],
+        driveLink: "" },
+      { num: 27, title: "הרפז — Am. U. 2025 (SSRN)", downloaded: true,
+        file: "fulltext.pdf",
+        importance: "medium",
+        summary: "Assaf Harpaz, 'Global Tax Wars in the Digital Era', 75 Am. U. L. Rev. 77 (2025). Pillar One/Two, צפון מול דרום.",
+        relevance: "מעדכן את הפרספקטיבה ל-2025 — כולל כישלון Pillar One. רקע לפרק ממשקים.",
+        chapters: ["פרק 5"],
+        driveLink: "" },
+      { num: 28, title: "אבי-יונה — Harvard 2022", downloaded: true,
+        file: "A New Framework for Digital Taxation.pdf",
+        importance: "high",
+        summary: "Avi-Yonah, Kim & Sam, 'A New Framework for Digital Taxation', 63 Harv. Int'l L.J. 279 (2022). destination-based taxation.",
+        relevance: "Framework תיאורטי למיסוי דיגיטלי. תומך בפתרון המוצע של העבודה.",
+        chapters: ["פרק 5", "פרק 6"],
+        driveLink: "" },
+      { num: 29, title: "אבי-יונה — Michigan (חלופי)", downloaded: true,
+        file: "28b_Avi_Yonah_Harvard_HLI204_Original.pdf",
+        importance: "low",
+        summary: "אותו מאמר כמו 28 — קישור חלופי מ-University of Michigan.",
+        relevance: "כפילות של 28. לא נדרש בנפרד.",
+        chapters: [],
+        driveLink: "", removed: true },
+      { num: 30, title: "Taylor & Francis 2023", downloaded: true,
+        file: "Do software payments amount to royalties  Tracing the answer in the context of the engineering analysis case and proposing an alternative model.pdf",
+        importance: "high",
+        summary: "'Do software payments amount to royalties? Tracing the answer in the context of the engineering analysis case and proposing an alternative model' (2023). מודל: degree of access to IP.",
+        relevance: "מציע מודל חלופי שמתבסס על 'מידת הגישה ל-IP'. רלוונטי ישירות לטבלת הסיווג בפרק 6.",
+        chapters: ["פרק 3", "פרק 6"],
+        driveLink: "" },
+      { num: 31, title: "אבי-יונה 1997", downloaded: true,
+        file: "ssrn-3920270 (1).pdf",
+        importance: "medium",
+        summary: "Avi-Yonah, 'International Taxation of Electronic Commerce', 52 Tax L. Rev. 507 (1997). הקלאסיקה.",
+        relevance: "האב המייסד של הדיון — 1997, לפני הענן. מראה שהבעיות זוהו מוקדם אך לא נפתרו.",
+        chapters: ["פרק 1 — מבוא"],
+        driveLink: "" }
+    ]
+  }
+];
+
+function render() {
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '';
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+
+  let totalShown = 0, downloadedCount = 0, summarizedCount = 0, missingCount = 0;
+
+  SOURCES.forEach(section => {
+    const filteredItems = section.items.filter(item => {
+      const matchSearch = !search ||
+        item.title.toLowerCase().includes(search) ||
+        item.summary.toLowerCase().includes(search) ||
+        item.relevance.toLowerCase().includes(search) ||
+        (item.file && item.file.toLowerCase().includes(search));
+
+      const matchFilter = activeFilter === 'all' ||
+        (activeFilter === 'downloaded' && item.downloaded && !item.summarized && !item.removed) ||
+        (activeFilter === 'summarized' && item.summarized) ||
+        (activeFilter === 'removed' && item.removed) ||
+        (activeFilter === 'missing' && !item.downloaded && !item.summarized && !item.removed) ||
+        (activeFilter === 'high' && item.importance === 'high');
+
+      return matchSearch && matchFilter;
+    });
+
+    if (filteredItems.length === 0) return;
+
+    const sectionDiv = document.createElement('div');
+    const downloadedInSection = filteredItems.filter(i => i.downloaded && !i.summarized && !i.removed).length;
+    const summarizedInSection = filteredItems.filter(i => i.summarized).length;
+    const shownCount = downloadedInSection + summarizedInSection + filteredItems.filter(i => !i.downloaded && !i.summarized && !i.removed).length;
+    sectionDiv.innerHTML = `
+      <div class="section-header">
+        <span style="font-size:20px">${section.sectionIcon}</span>
+        <h2>${section.section}</h2>
+        <span class="badge">${downloadedInSection + summarizedInSection}/${shownCount}</span>
+      </div>`;
+
+    filteredItems.forEach(item => {
+      totalShown++;
+      
+      // Count by status
+      if (item.downloaded && !item.summarized && !item.removed) {
+        downloadedCount++;
+      } else if (item.summarized) {
+        summarizedCount++;
+      } else if (item.removed) {
+        // Don't count removed items
+      } else {
+        missingCount++;
+      }
+
+      const impLabel = item.importance === 'high' ? '⭐ חשיבות גבוהה' : item.importance === 'medium' ? 'חשיבות בינונית' : 'חשיבות נמוכה';
+      const impClass = `importance-${item.importance}`;
+      const chapTags = item.chapters.map(c => `<span class="chapter-tag">${c}</span>`).join('');
+
+      // Determine status label and card class
+      let statusLabel = '❌ חסר';
+      let cardClass = 'source-card missing';
+      let borderColor = 'var(--danger)';
+      let numBgColor = 'var(--danger)';
+      let statusBgColor = '#fed7d7';
+      let statusTextColor = '#9b2c2c';
+
+      if (item.downloaded && !item.summarized && !item.removed) {
+        statusLabel = '✅ הורד';
+        cardClass = 'source-card downloaded';
+        borderColor = 'var(--success)';
+        numBgColor = 'var(--success)';
+        statusBgColor = '#c6f6d5';
+        statusTextColor = '#276749';
+      } else if (item.summarized) {
+        statusLabel = '📝 סוכם';
+        cardClass = 'source-card summarized';
+        borderColor = '#3182ce';
+        numBgColor = '#3182ce';
+        statusBgColor = '#bee3f8';
+        statusTextColor = '#2c5282';
+      } else if (item.removed) {
+        statusLabel = '🔄 כפילות';
+        cardClass = 'source-card removed';
+        borderColor = 'var(--gray-300)';
+        numBgColor = 'var(--gray-500)';
+        statusBgColor = '#e2e8f0';
+        statusTextColor = '#4a5568';
+      }
+
+      const card = document.createElement('div');
+      card.className = cardClass;
+      card.style.borderRight = `4px solid ${borderColor}`;
+      
+      card.innerHTML = `
+        <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+          <div class="card-num" style="background: ${numBgColor}">${item.num}</div>
+          <div class="card-title">${item.title}</div>
+          <span class="importance-badge ${impClass}">${impLabel}</span>
+          <span class="card-status" style="background: ${statusBgColor}; color: ${statusTextColor}">${statusLabel}</span>
+          <i class="fas fa-chevron-down expand-icon"></i>
+        </div>
+        <div class="card-body">
+          <div class="detail-grid">
+            <div class="detail-box">
+              <h4><i class="fas fa-file-alt"></i> תקציר</h4>
+              <p>${item.summary}</p>
+            </div>
+            <div class="detail-box">
+              <h4><i class="fas fa-star"></i> חשיבות לעבודה</h4>
+              <p>${item.relevance}</p>
+            </div>
+          </div>
+          ${chapTags ? `<div style="margin-top:12px"><span style="font-size:12px;color:var(--gray-500)">רלוונטי לפרקים:</span> ${chapTags}</div>` : ''}
+          ${(item.downloaded || item.summarized) && item.file ? `
+            <div class="file-info">
+              <i class="fas fa-file-pdf" style="font-size:18px"></i>
+              <div>
+                <div style="font-size:12px;color:var(--gray-500)">קובץ בתיקייה:</div>
+                <div class="filename">${item.file}</div>
+              </div>
+            </div>` : ''}
+          ${item.driveLink ? `<a class="drive-link" href="${item.driveLink}" target="_blank"><i class="fab fa-google-drive"></i> פתח ב-Google Drive</a>` :
+            (item.downloaded || item.summarized) ? `<a class="drive-link disabled"><i class="fab fa-google-drive"></i> קישור Drive — יתווסף בקרוב</a>` : ''}
+        </div>`;
+      sectionDiv.appendChild(card);
+    });
+    main.appendChild(sectionDiv);
+  });
+
+  document.getElementById('totalCount').textContent = downloadedCount + summarizedCount + missingCount;
+  document.getElementById('doneCount').textContent = downloadedCount + summarizedCount;
+  document.getElementById('pendingCount').textContent = missingCount;
+  const total = downloadedCount + summarizedCount + missingCount;
+  const pct = total > 0 ? Math.round(((downloadedCount + summarizedCount) / total) * 100) : 0;
+  document.getElementById('progressBar').textContent = pct + '%';
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
+// Search
+document.getElementById('searchBox').addEventListener('input', render);
+
+// Expand all
+document.getElementById('expandAll').addEventListener('click', () => {
+  const cards = document.querySelectorAll('.source-card');
+  const anyOpen = [...cards].some(c => c.classList.contains('open'));
+  cards.forEach(c => anyOpen ? c.classList.remove('open') : c.classList.add('open'));
+});
+
+render();
+  });
+});
+
+// Search
+document.getElementById('searchBox').addEventListener('input', render);
+
+// Expand all
+document.getElementById('expandAll').addEventListener('click', () => {
+  const cards = document.querySelectorAll('.source-card');
+  const anyOpen = [...cards].some(c => c.classList.contains('open'));
+  cards.forEach(c => anyOpen ? c.classList.remove('open') : c.classList.add('open'));
+});
+
+render();
+</script>
+</body>
+</html>
